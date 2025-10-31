@@ -44,10 +44,10 @@ builder.Services.AddSwaggerGen(setup =>
 
 builder.Services.Configure<KeycloakConfiguration>(builder.Configuration.GetSection("KeycloakConfiguration"));
 
+builder.Services.AddScoped<IUserRolesService, UserRolesManager>();
 builder.Services.AddScoped<IKeycloakService, KeycloakManager>();
 builder.Services.AddScoped<IUserService, UserManager>();
 builder.Services.AddScoped<IRoleService, RoleManager>();
-builder.Services.AddScoped<IUserRolesService, UserRolesManager>();
 builder.Services.AddKeycloakWebApiAuthentication(builder.Configuration);
 builder.Services.AddAuthorization(options =>
 {

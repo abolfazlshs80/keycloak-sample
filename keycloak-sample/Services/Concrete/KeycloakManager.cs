@@ -6,6 +6,7 @@ using System.Text.Json;
 using Business.DTOs;
 using Business.DTOs.Authentication;
 using keycloak_sample.Services.Abstract;
+using keycloak_sample.Services.Concrete;
 using keycloak_sample.Services.DTOs.Authentication;
 using keycloak_sample.Services.DTOs.Common;
 using keycloak_sample.Services.DTOs.Roles;
@@ -20,6 +21,7 @@ public class KeycloakManager : IKeycloakService
 {
     private readonly IOptions<KeycloakConfiguration> _options;
     private readonly HttpClient _httpClient;
+    private readonly IUserRolesService _userRolesService;
 
     public KeycloakManager(IOptions<KeycloakConfiguration> options)
     {
@@ -239,21 +241,22 @@ public class KeycloakManager : IKeycloakService
 
         var obj = JsonSerializer.Deserialize<T>(response);
 
-        return Result<T>.Succeed(obj!);    }
+        return Result<T>.Succeed(obj!);
+    }
 
     public async Task<Result<T>> DeleteAsync<T>(string endpoint, bool reqToken = false,
         CancellationToken cancellationToken = default)
     {
 
-        
-        
+
+
         if (reqToken)
         {
             string token = await GetAdminTokenAsync(cancellationToken);
 
             _httpClient.DefaultRequestHeaders.Authorization = new("Bearer", token);
         }
-        
+
 
         var message = await _httpClient.DeleteAsync(endpoint, cancellationToken);
 
@@ -280,11 +283,12 @@ public class KeycloakManager : IKeycloakService
 
         var obj = JsonSerializer.Deserialize<T>(response);
 
-        return Result<T>.Succeed(obj!);    }
+        return Result<T>.Succeed(obj!);
+    }
 
     public async Task<Result<T>> DeleteAsync<T>(string endpoint, object data, bool reqToken = false, CancellationToken cancellationToken = default)
     {
-      
+
         if (reqToken)
         {
             string token = await GetAdminTokenAsync(cancellationToken);
@@ -294,11 +298,11 @@ public class KeycloakManager : IKeycloakService
 
 
         var request = new HttpRequestMessage(HttpMethod.Delete, endpoint);
-            
-            string str = JsonSerializer.Serialize(data);
-            request.Content = new StringContent(str, Encoding.UTF8, "application/json");
-        
-        
+
+        string str = JsonSerializer.Serialize(data);
+        request.Content = new StringContent(str, Encoding.UTF8, "application/json");
+
+
         var message = await _httpClient.SendAsync(request, cancellationToken);
 
         var response = await message.Content.ReadAsStringAsync();
@@ -324,7 +328,8 @@ public class KeycloakManager : IKeycloakService
 
         var obj = JsonSerializer.Deserialize<T>(response);
 
-        return Result<T>.Succeed(obj!);      }
+        return Result<T>.Succeed(obj!);
+    }
 
     public async Task<Result<T>> PostUrlEncodedFormAsync<T>(
         string endpoint,
@@ -373,7 +378,7 @@ public class KeycloakManager : IKeycloakService
 
             _httpClient.DefaultRequestHeaders.Authorization = new("Bearer", token);
         }
-        
+
         var message = await _httpClient.GetAsync(endpoint, cancellationToken);
 
         var response = await message.Content.ReadAsStringAsync();
@@ -402,10 +407,10 @@ public class KeycloakManager : IKeycloakService
         return Result<T>.Succeed(obj!);
     }
 
-      
+
     public async Task<UserAuthInfoDto> GetCurrentUserInfoAsync(string accessToken, CancellationToken cancellationToken = default)
     {
-        try 
+        try
         {
             var handler = new JwtSecurityTokenHandler();
             var jsonToken = handler.ReadToken(accessToken) as JwtSecurityToken;
@@ -464,9 +469,10 @@ public class KeycloakManager : IKeycloakService
                 {
                     roles.AddRange(realmAccess.Roles.Select(r => new RoleDto { Name = r }));
                 }
-              
-            }
 
+            }
+            var userRoles = await _userRolesService.GetAllUsersRolesByUserId(userDto.Id.ToString(), cancellationToken);
+            roles.AddRange(userRoles.Select(_ => new RoleDto { Id = Guid.Parse(_.Id), Name = _.Name }));
             return new UserAuthInfoDto
             {
                 User = userDto,
